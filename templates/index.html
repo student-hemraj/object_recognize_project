@@ -1,0 +1,145 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Object Dataset Collector</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 30px auto;
+            padding: 20px;
+            background: #f4f6f8;
+            color: #222;
+        }
+
+        .card {
+            background: white;
+            padding: 22px;
+            border-radius: 12px;
+            box-shadow: 0 3px 12px #0001;
+        }
+
+        select, input, button {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 12px;
+            margin: 10px 0;
+            font-size: 16px;
+        }
+
+        button {
+            background: #1769aa;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        progress {
+            width: 100%;
+        }
+
+        #message {
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        .count {
+            margin: 8px 0;
+        }
+    </style>
+</head>
+
+<body>
+<div class="card">
+    <h2>Object Dataset Collector</h2>
+    <p>Choose an object, capture a photo, and save it to your laptop.</p>
+
+    <form id="captureForm">
+        <label for="object">Select object:</label>
+        <select id="object" name="object" required>
+            {% for obj in objects %}
+            <option value="{{ obj }}">{{ obj }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="photo">Capture or select a photo:</label>
+        <input
+            id="photo"
+            name="photo"
+            type="file"
+            accept="image/*"
+            capture="environment"
+            required
+        >
+
+        <button type="submit">Save Photo</button>
+    </form>
+
+    <p id="message" aria-live="polite"></p>
+
+    <h3>Dataset progress</h3>
+    <div id="progressList">
+        {% for obj in objects %}
+        <div class="count" data-object="{{ obj }}">
+            {{ obj }}: {{ progress[obj] }}/50
+            <progress value="{{ progress[obj] }}" max="50"></progress>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    const form = document.getElementById("captureForm");
+    const message = document.getElementById("message");
+    const objectSelect = document.getElementById("object");
+    const photoInput = document.getElementById("photo");
+
+    form.addEventListener("submit", async function(event) {
+        event.preventDefault();
+
+        if (!photoInput.files.length) {
+            message.textContent = "Please capture or select a photo.";
+            return;
+        }
+
+        const formData = new FormData(form);
+        message.textContent = "Saving photo...";
+
+        try {
+            const response = await fetch("/capture", {
+                method: "POST",
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                message.textContent = result.error || "Could not save photo.";
+            } else {
+                message.textContent = result.message;
+                photoInput.value = "";
+
+                for (const [obj, count] of Object.entries(result.progress)) {
+                    const item = document.querySelector(
+                        `[data-object="${obj}"]`
+                    );
+
+                    if (item) {
+                        item.firstChild.textContent = `${obj}: ${count}/50 `;
+                        item.querySelector("progress").value = count;
+                    }
+                }
+            }
+        } catch (error) {
+            message.textContent =
+                "Connection failed. Check that the Flask server is running.";
+        }
+    });
+</script>
+</body>
+</html>

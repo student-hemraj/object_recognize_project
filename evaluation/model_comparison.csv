@@ -1,0 +1,7 @@
+Model,Accuracy
+Logistic Regression,95.0
+Decision Tree,76.0
+Naive Bayes,87.0
+KNN,86.0
+Random Forest,89.0
+Support Vector Classifier,94.0
